@@ -1,2 +1,2 @@
-# server
+# Server
 Proyecto AD-DI
