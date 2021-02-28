@@ -1,15 +1,17 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-var Users=require('./users');
-var user=new Users.Users();
+var Users = require('./users');
+var user = new Users.Users();
 let app = express();
-app.listen(8080);
+app.listen(8090);
+app.use(bodyParser.json());
 
-user.getClientByUsername("Pepe",(res)=>{
-    console.log(res);
-});
+app.post('/register', (req, res) => {
+    // Rebre les dades i comprovar que els camps obligatories existeixen.
+    if (req.body.dni == "" || req.body.username == "" || req.body.password == "" || req.body.full_name == "") {
+        res.status(500).send({ ok: false, error: "Faltan campos obligatorios" });
+    }
 
-app.post('/register', (req) => {
     var newUser = {
         dni: req.body.dni,
         username: req.body.username,
@@ -18,16 +20,36 @@ app.post('/register', (req) => {
         avatar: req.body.avatar
     };
 
-    user.getClientByUsername(req.body.username,(res)=>{
-        if(res==0){
-            res.status(200).send({ ok: true, resultado: res });
+    // Comprovar que el username no està donat d’alta a la taula d’usuaris.
+    user.getUserByUsername(newUser.username, (result) => {
+        if (result != 0) {
+            res.status(500).send({ ok: false, error: "El usuario ya está dado de alta" });
         }
-        if(res!=0){
-            res.status(400)
-            .send({
-                ok: false,
-                error: "Error añadiendo contacto"
+        else {
+            // INSERTAR EL USUARIO
+            user.insertUser(newUser.username, newUser.password, newUser.full_name, newUser.avatar, (res) => {
+                console.log(res);
+
+                // Verificar que el dni està o no a la taula de DNI_PROFES
+                user.verifyProfe(newUser.dni, (result) => {
+                    if (result == 0) {
+                        user.insertAlumne(newUser.username, null, null, (res) => {
+                            console.log(res);
+                        });
+                    }
+                    if (result != 0) {
+                        console.log("El dni pertenece a un profe")
+                    }
+                });
+
             });
+
+
         }
     });
+
+
+
+
+
 });
